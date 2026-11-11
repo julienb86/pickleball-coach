@@ -1,98 +1,83 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useState } from "react";
+import { Redirect } from "expo-router";
+import { useQueryClient } from "@tanstack/react-query";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/lib/supabase";
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
+export default function Index() {
+  const { session, profile, loading } = useAuth();
+
+  if (loading) {
     return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator />
+      </View>
     );
   }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
+
+  if (!session) {
+    return <Redirect href="/(auth)/login" />;
+  }
+
+  if (profile && !profile.approved) {
+    return <PendingApproval />;
+  }
+
+  if (profile?.role === "coach") {
+    return <Redirect href="/(coach)/today" />;
+  }
+
+  if (profile?.role === "player") {
+    return <Redirect href="/(player)/progress" />;
+  }
+
+  // Logged in but no profile: offer a way out instead of looping on the login screen.
   return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
+    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24, gap: 16 }}>
+      <Text style={{ fontSize: 20, fontWeight: "700" }}>Profil introuvable</Text>
+      <Text style={{ textAlign: "center" }}>
+        Ce compte n'a pas de profil. Déconnectez-vous, puis recréez votre compte.
+      </Text>
+      <Pressable
+        style={{ backgroundColor: "#1a73e8", borderRadius: 8, padding: 14 }}
+        onPress={() => supabase.auth.signOut()}>
+        <Text style={{ color: "#fff", fontWeight: "600" }}>Se déconnecter</Text>
+      </Pressable>
+    </View>
   );
 }
 
-export default function HomeScreen() {
+function PendingApproval() {
+  const queryClient = useQueryClient();
+  const [checking, setChecking] = useState(false);
+
+  async function checkAgain() {
+    setChecking(true);
+    await queryClient.invalidateQueries({ queryKey: ["profile"] });
+    setChecking(false);
+  }
+
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
-
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24, gap: 16 }}>
+      <Text style={{ fontSize: 20, fontWeight: "700" }}>Compte en attente</Text>
+      <Text style={{ textAlign: "center" }}>
+        Votre compte doit être validé par l’administrateur avant de pouvoir utiliser l’application.
+      </Text>
+      <Pressable
+        style={{ backgroundColor: "#1a73e8", borderRadius: 8, padding: 14 }}
+        onPress={checkAgain}
+        disabled={checking}>
+        {checking ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={{ color: "#fff", fontWeight: "600" }}>Vérifier à nouveau</Text>
+        )}
+      </Pressable>
+      <Pressable onPress={() => supabase.auth.signOut()} hitSlop={12}>
+        <Text>Se déconnecter</Text>
+      </Pressable>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
-  },
-});
