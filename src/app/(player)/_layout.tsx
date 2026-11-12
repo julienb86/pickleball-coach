@@ -30,6 +30,10 @@ export default function PlayerLayout() {
           options={{ title: "Calendrier", tabBarIcon: () => <Text style={{ fontSize: 20 }}>📅</Text> }}
         />
         <Tabs.Screen
+          name="coaches"
+          options={{ title: "Coachs", tabBarIcon: () => <Text style={{ fontSize: 20 }}>🧑‍🏫</Text> }}
+        />
+        <Tabs.Screen
           name="profile"
           options={{ title: "Profil", tabBarIcon: () => <Text style={{ fontSize: 20 }}>🙂</Text> }}
         />

@@ -25,6 +25,7 @@ Dans l'éditeur SQL du projet (SQL Editor), exécuter chaque fichier en entier, 
 10. `009_avatars.sql`
 11. `011_delete_own_account.sql` : chacun peut supprimer son propre compte depuis l’onglet Profil.
 12. `012_wednesday_slots.sql` : séances du mercredi en 2 créneaux (18h-20h, 20h-22h) en plus du lundi.
+13. `013_demote_coach.sql` : l’admin peut repasser un coach en joueur.
 
 La base de test démarre vide : elle ne contient pas les données de la base principale.
 
