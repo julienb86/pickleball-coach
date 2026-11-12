@@ -51,8 +51,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "build:android": "eas build --platform android --profile preview",
-    "update:preview": "eas update --channel preview --environment preview"
+    "build:android": "npx eas-cli@latest build --platform android --profile preview",
+    "update:preview": "npx eas-cli@latest update --channel preview --environment preview"
   },
   "private": true
 }
