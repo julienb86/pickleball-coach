@@ -12,16 +12,20 @@ import {
 import {
   formatLongDate,
   formatShortDate,
+  formatSessionLabel,
   isSessionDay,
   monthGrid,
   monthLabel,
   nextSessionDate,
   parseISODate,
+  slotsOn,
   toISODate,
+  type Slot,
 } from "@/lib/dates";
 import {
   participationSummary,
   personName,
+  sessionFor,
   useCalendar,
   useClaimSession,
   useReleaseSession,
@@ -119,7 +123,7 @@ export function SessionsCalendar() {
         <LegendItem style={styles.dayPast} label="Passée" />
       </View>
 
-      <SessionDetail
+      <DayDetail
         key={selected}
         date={selected}
         today={today}
@@ -155,7 +159,8 @@ function DayCell({
     );
   }
 
-  const hasCoach = !!data.sessions.find((s) => s.date === date)?.coach_id;
+  // Green only when every slot of the day has its coach.
+  const hasCoach = slotsOn(date).every((slot) => !!sessionFor(data, date, slot.key)?.coach_id);
   const statusStyle = date < today ? styles.dayPast : hasCoach ? styles.dayCovered : styles.dayOpen;
 
   return (
@@ -179,7 +184,7 @@ function LegendItem({ style, label }: { style: object; label: string }) {
   );
 }
 
-function SessionDetail({
+function DayDetail({
   date,
   today,
   data,
@@ -192,15 +197,56 @@ function SessionDetail({
   myId: string | undefined;
   isCoach: boolean;
 }) {
+  const slots = slotsOn(date);
+
+  return (
+    <View style={styles.detail}>
+      <Text style={styles.detailTitle}>{formatLongDate(date)}</Text>
+      {slots.map((slot) => (
+        <SlotDetail
+          key={slot.key}
+          date={date}
+          slot={slot}
+          showLabel={slots.length > 1}
+          today={today}
+          data={data}
+          myId={myId}
+          isCoach={isCoach}
+        />
+      ))}
+      {date >= today && <PreviousParticipants data={data} today={today} />}
+    </View>
+  );
+}
+
+/** One session: its coach, its program and its attendance. */
+function SlotDetail({
+  date,
+  slot,
+  showLabel,
+  today,
+  data,
+  myId,
+  isCoach,
+}: {
+  date: string;
+  slot: Slot;
+  showLabel: boolean;
+  today: string;
+  data: CalendarData;
+  myId: string | undefined;
+  isCoach: boolean;
+}) {
   const claim = useClaimSession();
   const release = useReleaseSession();
   const setPresence = useSetPresence();
 
-  const session = data.sessions.find((s) => s.date === date);
+  const session = sessionFor(data, date, slot.key);
   const coach = data.people.find((p) => p.id === session?.coach_id);
   const isUpcoming = date >= today;
   const isMine = !!myId && session?.coach_id === myId;
   const canMark = isMine && date <= today;
+  const ref = { date, slot: slot.key };
 
   const players = data.people
     .filter((p) => p.role === "player")
@@ -212,8 +258,8 @@ function SessionDetail({
   const mutationError = claim.error ?? release.error ?? setPresence.error;
 
   return (
-    <View style={styles.detail}>
-      <Text style={styles.detailTitle}>{formatLongDate(date)}</Text>
+    <View style={[styles.slot, showLabel && styles.slotCard]}>
+      {showLabel && slot.label && <Text style={styles.slotTitle}>{slot.label}</Text>}
 
       <View style={styles.personRow}>
         {coach && <Avatar owner={coach} size={32} />}
@@ -227,8 +273,10 @@ function SessionDetail({
         <Pressable
           style={styles.primaryButton}
           disabled={claim.isPending}
-          onPress={() => claim.mutate(date)}>
-          <Text style={styles.primaryButtonText}>Me positionner comme coach</Text>
+          onPress={() => claim.mutate(ref)}>
+          <Text style={styles.primaryButtonText}>
+            {showLabel ? `Me positionner sur ${slot.label}` : "Me positionner comme coach"}
+          </Text>
         </Pressable>
       )}
 
@@ -236,21 +284,25 @@ function SessionDetail({
         <Pressable
           style={styles.secondaryButton}
           disabled={release.isPending}
-          onPress={() => release.mutate(date)}>
-          <Text style={styles.secondaryButtonText}>Me retirer de cette séance</Text>
+          onPress={() => release.mutate(ref)}>
+          <Text style={styles.secondaryButtonText}>
+            {showLabel ? "Me retirer de ce créneau" : "Me retirer de cette séance"}
+          </Text>
         </Pressable>
       )}
 
       {mutationError && <Text style={styles.error}>{mutationError.message}</Text>}
 
-      {isMine && session && <SessionProgram sessionId={session.id} dateLabel={formatLongDate(date)} />}
+      {isMine && session && (
+        <SessionProgram sessionId={session.id} dateLabel={formatSessionLabel(date, slot.key)} />
+      )}
 
       {canMark && session && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
             Présents : {presentPlayers.length} / {players.length}
           </Text>
-          {players.length === 0 && <Text style={styles.muted}>Aucun joueur inscrit pour l'instant.</Text>}
+          {players.length === 0 && <Text style={styles.muted}>Aucun joueur inscrit pour l’instant.</Text>}
           <View style={styles.chips}>
             {players.map((player) => {
               const present = presentIds.has(player.id);
@@ -289,8 +341,6 @@ function SessionDetail({
           )}
         </View>
       )}
-
-      {isUpcoming && <PreviousParticipants data={data} today={today} />}
     </View>
   );
 }
@@ -345,6 +395,9 @@ const styles = StyleSheet.create({
   legendText: { color: "#556", fontSize: 13 },
   detail: { marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: "#e2e5eb", gap: 10 },
   detailTitle: { fontSize: 20, fontWeight: "700" },
+  slot: { gap: 10 },
+  slotCard: { borderWidth: 1, borderColor: "#e2e5eb", borderRadius: 12, padding: 12 },
+  slotTitle: { fontSize: 18, fontWeight: "700", color: BLUE },
   coachLine: { fontSize: 16 },
   personRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   section: { marginTop: 8, gap: 6 },

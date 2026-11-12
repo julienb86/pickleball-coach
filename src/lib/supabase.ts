@@ -17,3 +17,6 @@ export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
     detectSessionInUrl: false,
   },
 });
+
+/** True when `npx expo start` uses the test database (.env.development.local). */
+export const IS_TEST_DATABASE = process.env.EXPO_PUBLIC_APP_ENV === "test";

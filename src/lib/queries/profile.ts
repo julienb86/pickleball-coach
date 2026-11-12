@@ -64,3 +64,28 @@ export function useSetAvatar() {
       ]),
   });
 }
+
+/**
+ * Deletes the signed-in user's account and everything attached to it, then
+ * signs out on this device. Refused by the database for the administrator.
+ */
+export function useDeleteMyAccount() {
+  const userId = useAuth().session?.user.id;
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      if (!userId) throw new Error("Vous n'êtes pas connecté");
+      // Their photo would otherwise stay public in storage. Nothing to remove is fine.
+      await supabase.storage.from("avatars").remove([avatarPath(userId)]);
+
+      const { error } = await supabase.rpc("delete_my_account");
+      if (error) throw new Error(error.message);
+
+      // The login no longer exists: only this device's session is left to clear.
+      await supabase.auth.signOut({ scope: "local" });
+    },
+    // The next account on this device must not see this account's cached data.
+    onSuccess: () => queryClient.clear(),
+  });
+}

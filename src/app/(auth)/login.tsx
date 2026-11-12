@@ -3,6 +3,7 @@ import { Link, router } from "expo-router";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { TestDatabaseBadge } from "@/components/test-database-badge";
 import { supabase } from "@/lib/supabase";
 import { authErrorMessage, isValidEmail, normalizeEmail } from "@/lib/validation";
 
@@ -38,6 +39,7 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <TestDatabaseBadge />
       <Text style={styles.title}>Connexion</Text>
 
       <TextInput
