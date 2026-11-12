@@ -8,6 +8,7 @@ import {
   useAccounts,
   useApproveAccount,
   useDeleteAccount,
+  useDemoteToPlayer,
   useIsAdmin,
   usePromoteToCoach,
 } from "@/lib/queries/accounts";
@@ -122,8 +123,10 @@ function AccountSection({
 function AccountRow({ account, isMe }: { account: Account; isMe: boolean }) {
   const remove = useDeleteAccount();
   const approve = useApproveAccount();
-  const [confirming, setConfirming] = useState(false);
-  const busy = remove.isPending || approve.isPending;
+  const demote = useDemoteToPlayer();
+  const [confirming, setConfirming] = useState<"delete" | "demote" | null>(null);
+  const busy = remove.isPending || approve.isPending || demote.isPending;
+  const confirmAction = confirming === "demote" ? demote : remove;
 
   return (
     <View style={styles.row}>
@@ -133,26 +136,33 @@ function AccountRow({ account, isMe }: { account: Account; isMe: boolean }) {
           {isMe && " (vous)"}
         </Text>
         <Text style={styles.muted}>{account.email}</Text>
-        {confirming && (
+        {confirming === "delete" && (
           <Text style={styles.error}>
             Supprimer définitivement ce compte et toutes ses données (présences, notes, objectifs) ?
           </Text>
         )}
+        {confirming === "demote" && (
+          <Text style={styles.warning}>
+            Repasser ce coach en joueur ? Ses séances à venir seront libérées pour les autres coachs ; ses
+            séances passées et ses exercices sont conservés.
+          </Text>
+        )}
         {remove.isError && <Text style={styles.error}>{remove.error.message}</Text>}
         {approve.isError && <Text style={styles.error}>{approve.error.message}</Text>}
+        {demote.isError && <Text style={styles.error}>{demote.error.message}</Text>}
       </View>
 
       {!isMe &&
         (confirming ? (
           <View style={styles.actions}>
-            <Pressable onPress={() => setConfirming(false)} disabled={busy} hitSlop={8}>
+            <Pressable onPress={() => setConfirming(null)} disabled={busy} hitSlop={8}>
               <Text>Annuler</Text>
             </Pressable>
             <Pressable
-              style={styles.deleteButton}
-              onPress={() => remove.mutate(account.id)}
+              style={confirming === "demote" ? styles.demoteButton : styles.deleteButton}
+              onPress={() => confirmAction.mutate(account.id, { onSuccess: () => setConfirming(null) })}
               disabled={busy}>
-              {remove.isPending ? (
+              {confirmAction.isPending ? (
                 <ActivityIndicator color="#fff" />
               ) : (
                 <Text style={styles.deleteText}>Confirmer</Text>
@@ -173,8 +183,13 @@ function AccountRow({ account, isMe }: { account: Account; isMe: boolean }) {
                 )}
               </Pressable>
             )}
+            {account.role === "coach" && account.approved && (
+              <Pressable onPress={() => setConfirming("demote")} disabled={busy} hitSlop={8}>
+                <Text style={styles.link}>Repasser joueur</Text>
+              </Pressable>
+            )}
             <Pressable
-              onPress={() => setConfirming(true)}
+              onPress={() => setConfirming("delete")}
               disabled={busy}
               hitSlop={8}
               accessibilityRole="button">
@@ -209,6 +224,9 @@ const styles = StyleSheet.create({
   buttonDisabled: { opacity: 0.5 },
   buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
   error: { color: "#c0392b" },
+  warning: { color: "#b35c00" },
+  link: { color: "#1a73e8", fontWeight: "600" },
+  demoteButton: { backgroundColor: "#d97a00", borderRadius: 8, paddingVertical: 8, paddingHorizontal: 12 },
   success: { color: "#1e8e3e" },
   row: {
     flexDirection: "row",

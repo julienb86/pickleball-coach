@@ -4,19 +4,19 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
 import { ExercisePicker } from "@/components/exercise-picker";
 import { useAuth } from "@/hooks/use-auth";
-import { formatLongDate, toISODate, upcomingSessionDates } from "@/lib/dates";
+import { formatSessionLabel, slotsOn, toISODate, upcomingSessionDates } from "@/lib/dates";
 import type { LibraryExercise } from "@/lib/queries/exercises";
 import { useCreateSessionWithExercises } from "@/lib/queries/program";
-import { personName, useCalendar } from "@/lib/queries/sessions";
+import { personName, sessionFor, useCalendar, type SlotRef } from "@/lib/queries/sessions";
 
-/** How many upcoming Mondays the coach can choose from. */
-const DATES_SHOWN = 8;
+/** How many upcoming session days (Mondays and Wednesdays) the coach can choose from. */
+const DAYS_SHOWN = 8;
 
 /** Tick exercises first, then pick the date: the session is created with them. */
 export function CreateSessionButton() {
   const [step, setStep] = useState<"idle" | "exercises" | "date">("idle");
   const [exercises, setExercises] = useState<LibraryExercise[]>([]);
-  const [created, setCreated] = useState<{ date: string; count: number } | null>(null);
+  const [created, setCreated] = useState<(SlotRef & { count: number }) | null>(null);
 
   function start() {
     setCreated(null);
@@ -32,7 +32,7 @@ export function CreateSessionButton() {
 
       {created && (
         <Text style={styles.success}>
-          Séance du {formatLongDate(created.date)} : {created.count} exercice
+          Séance du {formatSessionLabel(created.date, created.slot)} : {created.count} exercice
           {created.count > 1 ? "s ajoutés" : " ajouté"}. Retrouvez-la dans le Calendrier.
         </Text>
       )}
@@ -57,8 +57,8 @@ export function CreateSessionButton() {
         <DatePicker
           exercises={exercises}
           onBack={() => setStep("exercises")}
-          onCreated={(date) => {
-            setCreated({ date, count: exercises.length });
+          onCreated={(ref) => {
+            setCreated({ ...ref, count: exercises.length });
             setStep("idle");
           }}
         />
@@ -74,12 +74,15 @@ function DatePicker({
 }: {
   exercises: LibraryExercise[];
   onBack: () => void;
-  onCreated: (date: string) => void;
+  onCreated: (ref: SlotRef) => void;
 }) {
   const myId = useAuth().session?.user.id;
   const calendar = useCalendar();
   const create = useCreateSessionWithExercises();
-  const dates = upcomingSessionDates(toISODate(new Date()), DATES_SHOWN);
+  // One row per session: Monday's, then each Wednesday slot.
+  const refs: SlotRef[] = upcomingSessionDates(toISODate(new Date()), DAYS_SHOWN).flatMap((date) =>
+    slotsOn(date).map((slot) => ({ date, slot: slot.key })),
+  );
   const count = exercises.length;
 
   return (
@@ -87,7 +90,7 @@ function DatePicker({
       <SafeAreaProvider>
         <SafeAreaView style={styles.screen}>
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>Choisissez la date</Text>
+            <Text style={styles.headerTitle}>Choisissez la séance</Text>
             <Pressable onPress={onBack} hitSlop={12} disabled={create.isPending}>
               <Text style={styles.link}>Retour</Text>
             </Pressable>
@@ -95,8 +98,8 @@ function DatePicker({
 
           <ScrollView contentContainerStyle={styles.content}>
             <Text style={styles.muted}>
-              {count} exercice{count > 1 ? "s sélectionnés" : " sélectionné"}. Touchez une date pour créer la
-              séance.
+              {count} exercice{count > 1 ? "s sélectionnés" : " sélectionné"}. Touchez une séance pour y ajouter
+              ces exercices.
             </Text>
 
             {calendar.isPending && <ActivityIndicator />}
@@ -104,8 +107,8 @@ function DatePicker({
             {create.isError && <Text style={styles.error}>{create.error.message}</Text>}
 
             {calendar.isSuccess &&
-              dates.map((date) => {
-                const session = calendar.data.sessions.find((s) => s.date === date);
+              refs.map(({ date, slot }) => {
+                const session = sessionFor(calendar.data, date, slot);
                 const mine = !!myId && session?.coach_id === myId;
                 const taken = !!session?.coach_id && !mine;
                 const coach = calendar.data.people.find((p) => p.id === session?.coach_id);
@@ -114,18 +117,19 @@ function DatePicker({
                   : taken
                     ? `Coach : ${personName(coach)}`
                     : "Libre : vous en serez le coach";
-                const busy = create.isPending && create.variables?.date === date;
+                const busy =
+                  create.isPending && create.variables?.date === date && create.variables?.slot === slot;
 
                 return (
                   <Pressable
-                    key={date}
+                    key={`${date}-${slot}`}
                     style={[styles.row, taken && styles.rowDisabled]}
                     disabled={taken || create.isPending}
                     onPress={() =>
-                      create.mutate({ date, exercises, myId }, { onSuccess: () => onCreated(date) })
+                      create.mutate({ date, slot, exercises, myId }, { onSuccess: () => onCreated({ date, slot }) })
                     }>
                     <View style={styles.rowText}>
-                      <Text style={styles.rowTitle}>{formatLongDate(date)}</Text>
+                      <Text style={styles.rowTitle}>{formatSessionLabel(date, slot)}</Text>
                       <Text style={mine ? styles.mine : styles.muted}>{status}</Text>
                     </View>
                     {busy && <ActivityIndicator />}

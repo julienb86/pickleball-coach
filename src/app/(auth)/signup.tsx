@@ -3,6 +3,7 @@ import { Link, router } from "expo-router";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { TestDatabaseBadge } from "@/components/test-database-badge";
 import { supabase } from "@/lib/supabase";
 import {
   authErrorMessage,
@@ -63,6 +64,7 @@ export default function SignupScreen() {
   if (checkEmail) {
     return (
       <SafeAreaView style={styles.container}>
+        <TestDatabaseBadge />
         <Text style={styles.title}>Vérifiez votre email</Text>
         <Text>
           Un lien de confirmation a été envoyé à {normalizeEmail(email)}. Confirmez puis connectez-vous.
@@ -76,6 +78,7 @@ export default function SignupScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <TestDatabaseBadge />
       <Text style={styles.title}>Créer un compte</Text>
 
       <TextInput

@@ -1,9 +1,6 @@
 // Dates are handled as local "YYYY-MM-DD" strings: a session happens on a
 // calendar day, and UTC conversions would shift it near midnight.
 
-/** Day sessions take place on, as in Date.getDay() (1 = Monday). */
-export const SESSION_WEEKDAY = 1;
-
 const MONTHS = [
   "janvier", "février", "mars", "avril", "mai", "juin",
   "juillet", "août", "septembre", "octobre", "novembre", "décembre",
@@ -21,25 +18,61 @@ export function parseISODate(iso: string): Date {
   return new Date(year, month - 1, day);
 }
 
+/** A session slot. "unique" is the only session of its day. */
+export type SlotKey = "unique" | "18-20" | "20-22";
+export type Slot = { key: SlotKey; label: string | null };
+
+/**
+ * Slots per weekday, as in Date.getDay() (1 = Monday, 3 = Wednesday).
+ * Also checked by the database (private.is_scheduled_slot, 012): change both together.
+ */
+const SCHEDULE: Partial<Record<number, Slot[]>> = {
+  1: [{ key: "unique", label: null }],
+  3: [
+    { key: "18-20", label: "18h-20h" },
+    { key: "20-22", label: "20h-22h" },
+  ],
+};
+
+/** The slots on that day, in time order. Empty if there is no session that day. */
+export function slotsOn(iso: string): Slot[] {
+  return SCHEDULE[parseISODate(iso).getDay()] ?? [];
+}
+
 export function isSessionDay(iso: string): boolean {
-  return parseISODate(iso).getDay() === SESSION_WEEKDAY;
+  return slotsOn(iso).length > 0;
+}
+
+export function slotLabel(key: string): string | null {
+  for (const slots of Object.values(SCHEDULE)) {
+    const slot = slots?.find((s) => s.key === key);
+    if (slot) return slot.label;
+  }
+  return null;
+}
+
+/** "mercredi 19 novembre 2026 · 18h-20h", or just the date for a day's only session. */
+export function formatSessionLabel(iso: string, slot: string): string {
+  const label = slotLabel(slot);
+  return label ? `${formatLongDate(iso)} · ${label}` : formatLongDate(iso);
 }
 
 /** The first session day on or after the given date. */
 export function nextSessionDate(fromIso: string): string {
-  const d = parseISODate(fromIso);
-  d.setDate(d.getDate() + ((SESSION_WEEKDAY - d.getDay() + 7) % 7));
-  return toISODate(d);
+  return upcomingSessionDates(fromIso, 1)[0];
 }
 
 /** The next `count` session days, starting with today if it is one. */
 export function upcomingSessionDates(fromIso: string, count: number): string[] {
-  const first = parseISODate(nextSessionDate(fromIso));
-  return Array.from({ length: count }, (_, i) => {
-    const d = new Date(first);
-    d.setDate(first.getDate() + 7 * i);
-    return toISODate(d);
-  });
+  const dates: string[] = [];
+  const d = parseISODate(fromIso);
+  // Every week has at least one session day, so this always ends.
+  while (dates.length < count) {
+    const iso = toISODate(d);
+    if (isSessionDay(iso)) dates.push(iso);
+    d.setDate(d.getDate() + 1);
+  }
+  return dates;
 }
 
 /** Weeks of a month (Monday first). Days outside the month are null. */

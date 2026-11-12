@@ -58,6 +58,18 @@ export function usePromoteToCoach() {
   });
 }
 
+/** Back to player; their upcoming sessions are released (see 013). */
+export function useDemoteToPlayer() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase.rpc("demote_to_player", { p_user_id: userId });
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => refreshLists(queryClient),
+  });
+}
+
 export function useApproveAccount() {
   const queryClient = useQueryClient();
   return useMutation({

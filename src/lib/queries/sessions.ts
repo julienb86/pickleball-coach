@@ -9,7 +9,7 @@ export type Person = {
   avatar_photo_at?: string | null;
   avatar_emoji?: string | null;
 };
-export type CalendarSession = { id: string; date: string; coach_id: string | null };
+export type CalendarSession = { id: string; date: string; slot: string; coach_id: string | null };
 /** A player who was present at a session. */
 export type Presence = { session_id: string; player_id: string };
 export type CalendarData = {
@@ -23,7 +23,7 @@ export const CALENDAR_KEY = ["calendar"];
 
 async function fetchCalendar(): Promise<CalendarData> {
   const [sessions, presences, people] = await Promise.all([
-    supabase.from("sessions").select("id, date, coach_id").order("date"),
+    supabase.from("sessions").select("id, date, slot, coach_id").order("date"),
     supabase.from("session_attendance").select("session_id, player_id").eq("present", true),
     supabase.from("profiles").select("id, role, full_name, avatar_photo_at, avatar_emoji"),
   ]);
@@ -39,6 +39,11 @@ async function fetchCalendar(): Promise<CalendarData> {
 
 export function useCalendar() {
   return useQuery({ queryKey: CALENDAR_KEY, queryFn: fetchCalendar });
+}
+
+/** The session of that date and slot, if a coach has ever taken it. */
+export function sessionFor(data: CalendarData, date: string, slot: string): CalendarSession | undefined {
+  return data.sessions.find((s) => s.date === date && s.slot === slot);
 }
 
 export function personName(person: Person | undefined): string {
@@ -69,22 +74,25 @@ export function participationSummary(data: CalendarData, today: string): Partici
   );
 }
 
-async function callDateFunction(name: "claim_session" | "release_session", date: string) {
-  const { error } = await supabase.rpc(name, { p_date: date });
+/** A session is identified by its date and its slot (see slotsOn in dates.ts). */
+export type SlotRef = { date: string; slot: string };
+
+async function callSlotFunction(name: "claim_session" | "release_session", { date, slot }: SlotRef) {
+  const { error } = await supabase.rpc(name, { p_date: date, p_slot: slot });
   if (error) throw new Error(error.message);
 }
 
-function useDateFunction(name: "claim_session" | "release_session") {
+function useSlotFunction(name: "claim_session" | "release_session") {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (date: string) => callDateFunction(name, date),
-    // Also on failure: another coach may have just taken this date.
+    mutationFn: (ref: SlotRef) => callSlotFunction(name, ref),
+    // Also on failure: another coach may have just taken this slot.
     onSettled: () => queryClient.invalidateQueries({ queryKey: CALENDAR_KEY }),
   });
 }
 
-export const useClaimSession = () => useDateFunction("claim_session");
-export const useReleaseSession = () => useDateFunction("release_session");
+export const useClaimSession = () => useSlotFunction("claim_session");
+export const useReleaseSession = () => useSlotFunction("release_session");
 
 type SetPresence = { sessionId: string; playerId: string; present: boolean };
 

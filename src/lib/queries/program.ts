@@ -66,26 +66,31 @@ export const useAddToProgram = (sessionId: string) =>
     await insertCopies(sessionId, exercises, Math.max(0, ...current.map((item) => item.position)));
   });
 
-async function findSession(date: string) {
-  const { data, error } = await supabase.from("sessions").select("id, coach_id").eq("date", date).maybeSingle();
+async function findSession(date: string, slot: string) {
+  const { data, error } = await supabase
+    .from("sessions")
+    .select("id, coach_id")
+    .eq("date", date)
+    .eq("slot", slot)
+    .maybeSingle();
   if (error) throw new Error(error.message);
   return data as { id: string; coach_id: string | null } | null;
 }
 
-type CreateSession = { date: string; exercises: LibraryExercise[]; myId: string | undefined };
+type CreateSession = { date: string; slot: string; exercises: LibraryExercise[]; myId: string | undefined };
 
 /**
- * Takes the date if no coach has it yet, then adds the exercises after those
+ * Takes the slot if no coach has it yet, then adds the exercises after those
  * already in the program. Refused if another coach leads that session.
  */
 export function useCreateSessionWithExercises() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ date, exercises, myId }: CreateSession) => {
-      let session = await findSession(date);
+    mutationFn: async ({ date, slot, exercises, myId }: CreateSession) => {
+      let session = await findSession(date, slot);
       if (!session?.coach_id) {
-        check(await supabase.rpc("claim_session", { p_date: date }));
-        session = await findSession(date);
+        check(await supabase.rpc("claim_session", { p_date: date, p_slot: slot }));
+        session = await findSession(date, slot);
       }
       if (!session || !myId || session.coach_id !== myId) {
         throw new Error("Un autre coach est déjà positionné sur cette séance");
@@ -102,7 +107,7 @@ export function useCreateSessionWithExercises() {
       await insertCopies(session.id, exercises, last[0]?.position ?? 0);
       return session.id;
     },
-    // Also on failure: the date may have been taken before the exercises failed.
+    // Also on failure: the slot may have been taken before the exercises failed.
     onSettled: (sessionId) =>
       Promise.all([
         queryClient.invalidateQueries({ queryKey: CALENDAR_KEY }),

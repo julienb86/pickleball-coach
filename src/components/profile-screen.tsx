@@ -1,16 +1,19 @@
 import * as ImagePicker from "expo-image-picker";
+import { useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { Avatar } from "@/components/avatar";
 import { useAuth } from "@/hooks/use-auth";
 import { AVATAR_EMOJIS } from "@/lib/avatar";
-import { useSetAvatar } from "@/lib/queries/profile";
+import { useIsAdmin } from "@/lib/queries/accounts";
+import { useDeleteMyAccount, useSetAvatar } from "@/lib/queries/profile";
 import { personName } from "@/lib/queries/sessions";
 
 /** Shared by the coach and player tabs: choose a photo or an emoji avatar. */
 export function ProfileScreen() {
   const { profile } = useAuth();
   const setAvatar = useSetAvatar();
+  const { data: isAdmin } = useIsAdmin();
 
   if (!profile) return null;
 
@@ -73,7 +76,48 @@ export function ProfileScreen() {
           );
         })}
       </View>
+
+      {/* The database refuses it too: the app must keep its administrator. */}
+      {isAdmin === false && <DeleteMyAccount isCoach={profile.role === "coach"} />}
     </ScrollView>
+  );
+}
+
+// Two steps rather than Alert.alert, which does nothing on the web.
+function DeleteMyAccount({ isCoach }: { isCoach: boolean }) {
+  const remove = useDeleteMyAccount();
+  const [confirming, setConfirming] = useState(false);
+
+  if (!confirming) {
+    return (
+      <Pressable style={styles.deleteLink} onPress={() => setConfirming(true)} accessibilityRole="button">
+        <Text style={styles.error}>Supprimer mon compte</Text>
+      </Pressable>
+    );
+  }
+
+  return (
+    <View style={styles.deleteBox}>
+      <Text style={styles.deleteTitle}>Supprimer définitivement votre compte ?</Text>
+      <Text>
+        Votre compte, votre photo et vos données (présences, notes, objectifs) seront effacés. Cette action est
+        irréversible.
+        {isCoach && " Vos séances restent dans le calendrier, sans coach, et vos exercices restent dans la bibliothèque."}
+      </Text>
+      {remove.isError && <Text style={styles.error}>{remove.error.message}</Text>}
+      <View style={styles.deleteActions}>
+        <Pressable onPress={() => setConfirming(false)} disabled={remove.isPending} hitSlop={8}>
+          <Text>Annuler</Text>
+        </Pressable>
+        <Pressable style={styles.deleteButton} onPress={() => remove.mutate()} disabled={remove.isPending}>
+          {remove.isPending ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.deleteButtonText}>Supprimer définitivement</Text>
+          )}
+        </Pressable>
+      </View>
+    </View>
   );
 }
 
@@ -108,4 +152,17 @@ const styles = StyleSheet.create({
   },
   emojiSelected: { borderColor: "#1a73e8" },
   emojiText: { fontSize: 28 },
+  deleteLink: { alignSelf: "center", marginTop: 32, padding: 8 },
+  deleteBox: {
+    marginTop: 32,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: "#c0392b",
+    borderRadius: 8,
+    padding: 16,
+  },
+  deleteTitle: { fontSize: 16, fontWeight: "700", color: "#c0392b" },
+  deleteActions: { flexDirection: "row", justifyContent: "flex-end", alignItems: "center", gap: 20 },
+  deleteButton: { backgroundColor: "#c0392b", borderRadius: 8, paddingVertical: 10, paddingHorizontal: 14 },
+  deleteButtonText: { color: "#fff", fontWeight: "600" },
 });

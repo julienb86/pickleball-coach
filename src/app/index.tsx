@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
 import { useAuth } from "@/hooks/use-auth";
+import { TestDatabaseBadge } from "@/components/test-database-badge";
 import { supabase } from "@/lib/supabase";
 
 export default function Index() {
@@ -61,6 +62,7 @@ function PendingApproval() {
 
   return (
     <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24, gap: 16 }}>
+      <TestDatabaseBadge />
       <Text style={{ fontSize: 20, fontWeight: "700" }}>Compte en attente</Text>
       <Text style={{ textAlign: "center" }}>
         Votre compte doit être validé par l’administrateur avant de pouvoir utiliser l’application.

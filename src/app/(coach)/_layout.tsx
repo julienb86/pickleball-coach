@@ -1,7 +1,7 @@
 import { Text } from "react-native";
 import { Tabs } from "expo-router/js-tabs";
 
-import { HeaderAvatar, withName } from "@/components/header-avatar";
+import { HeaderAvatar, testHeaderStyle, testHeaderTintColor, withName } from "@/components/header-avatar";
 import { useAuth } from "@/hooks/use-auth";
 import { RoleGuard } from "@/components/role-guard";
 import { SignOutButton } from "@/components/sign-out-button";
@@ -18,6 +18,8 @@ export default function CoachLayout() {
       <Tabs
         screenOptions={{
           headerTitle: withName("Coach", profile?.full_name),
+          headerStyle: testHeaderStyle,
+          headerTintColor: testHeaderTintColor,
           headerLeft: () => <HeaderAvatar profileHref="/(coach)/profile" />,
           headerLeftContainerStyle: { paddingLeft: 16 },
           headerRight: () => <SignOutButton />,
@@ -43,6 +45,10 @@ export default function CoachLayout() {
             tabBarBadge: pendingCount > 0 ? pendingCount : undefined,
             tabBarIcon: () => <Text style={{ fontSize: 20 }}>👥</Text>,
           }}
+        />
+        <Tabs.Screen
+          name="coaches"
+          options={{ title: "Coachs", tabBarIcon: () => <Text style={{ fontSize: 20 }}>🧑‍🏫</Text> }}
         />
         <Tabs.Screen
           name="profile"
