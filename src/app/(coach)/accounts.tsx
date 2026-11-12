@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Redirect } from "expo-router";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
+import { TemporaryPasswordPanel } from "@/components/temporary-password-panel";
 import { useAuth } from "@/hooks/use-auth";
 import {
   type Account,
@@ -125,6 +126,7 @@ function AccountRow({ account, isMe }: { account: Account; isMe: boolean }) {
   const approve = useApproveAccount();
   const demote = useDemoteToPlayer();
   const [confirming, setConfirming] = useState<"delete" | "demote" | null>(null);
+  const [settingPassword, setSettingPassword] = useState(false);
   const busy = remove.isPending || approve.isPending || demote.isPending;
   const confirmAction = confirming === "demote" ? demote : remove;
 
@@ -183,6 +185,11 @@ function AccountRow({ account, isMe }: { account: Account; isMe: boolean }) {
                 )}
               </Pressable>
             )}
+            {account.approved && !settingPassword && (
+              <Pressable onPress={() => setSettingPassword(true)} disabled={busy} hitSlop={8}>
+                <Text style={styles.link}>Mot de passe</Text>
+              </Pressable>
+            )}
             {account.role === "coach" && account.approved && (
               <Pressable onPress={() => setConfirming("demote")} disabled={busy} hitSlop={8}>
                 <Text style={styles.link}>Repasser joueur</Text>
@@ -197,6 +204,11 @@ function AccountRow({ account, isMe }: { account: Account; isMe: boolean }) {
             </Pressable>
           </View>
         ))}
+
+      {/* Below the actions, at full width, so the password has room to be read. */}
+      {settingPassword && (
+        <TemporaryPasswordPanel userId={account.id} onClose={() => setSettingPassword(false)} />
+      )}
     </View>
   );
 }
@@ -228,17 +240,16 @@ const styles = StyleSheet.create({
   link: { color: "#1a73e8", fontWeight: "600" },
   demoteButton: { backgroundColor: "#d97a00", borderRadius: 8, paddingVertical: 8, paddingHorizontal: 12 },
   success: { color: "#1e8e3e" },
+  // Stacked (name, then actions, then panel) so nothing gets squeezed on a phone screen.
   row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 8,
+    gap: 10,
+    paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: "#ccc",
   },
-  rowText: { flex: 1, gap: 2 },
+  rowText: { gap: 2 },
   name: { fontSize: 16, fontWeight: "600" },
-  actions: { flexDirection: "row", alignItems: "center", gap: 16 },
+  actions: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: 20, rowGap: 10 },
   deleteButton: { backgroundColor: "#c0392b", borderRadius: 8, paddingVertical: 8, paddingHorizontal: 12 },
   approveButton: { backgroundColor: "#1e8e3e", borderRadius: 8, paddingVertical: 8, paddingHorizontal: 12 },
   deleteText: { color: "#fff", fontWeight: "600" },

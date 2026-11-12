@@ -3,6 +3,7 @@ import { useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { Avatar } from "@/components/avatar";
+import { ChangePassword } from "@/components/change-password";
 import { useAuth } from "@/hooks/use-auth";
 import { AVATAR_EMOJIS } from "@/lib/avatar";
 import { useIsAdmin } from "@/lib/queries/accounts";
@@ -76,6 +77,8 @@ export function ProfileScreen() {
           );
         })}
       </View>
+
+      <ChangePassword />
 
       {/* The database refuses it too: the app must keep its administrator. */}
       {isAdmin === false && <DeleteMyAccount isCoach={profile.role === "coach"} />}
