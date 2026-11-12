@@ -58,6 +58,16 @@ export function usePromoteToCoach() {
   });
 }
 
+/** Admin only: replaces someone's password with one to give them (see 014). */
+export function useSetTemporaryPassword() {
+  return useMutation({
+    mutationFn: async ({ userId, password }: { userId: string; password: string }) => {
+      const { error } = await supabase.rpc("admin_set_password", { p_user_id: userId, p_password: password });
+      if (error) throw new Error(error.message);
+    },
+  });
+}
+
 /** Back to player; their upcoming sessions are released (see 013). */
 export function useDemoteToPlayer() {
   const queryClient = useQueryClient();

@@ -64,6 +64,10 @@ export default function LoginScreen() {
         onChangeText={setPassword}
       />
 
+      <Link href="/(auth)/forgot-password" style={styles.forgot}>
+        <Text style={styles.forgotText}>Mot de passe oublié ?</Text>
+      </Link>
+
       {error && <Text style={styles.error}>{error}</Text>}
 
       <Pressable style={styles.button} onPress={handleLogin} disabled={submitting}>
@@ -97,4 +101,6 @@ const styles = StyleSheet.create({
   buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
   error: { color: "#c0392b" },
   link: { marginTop: 16, alignSelf: "center" },
+  forgot: { alignSelf: "flex-end" },
+  forgotText: { color: "#1a73e8" },
 });

@@ -56,6 +56,13 @@ export function authErrorMessage(error: { code?: string; message: string }): str
       return "Mot de passe trop faible : respectez toutes les règles indiquées.";
     case "email_address_invalid":
       return "Cette adresse email n'est pas acceptée.";
+    case "otp_expired":
+    case "otp_invalid":
+      return "Code invalide ou expiré. Demandez-en un nouveau.";
+    case "same_password":
+      return "Choisissez un mot de passe différent de l'actuel.";
+    case "reauthentication_needed":
+      return "Par sécurité, déconnectez-vous puis reconnectez-vous avant de changer votre mot de passe.";
     case "over_request_rate_limit":
     case "over_email_send_rate_limit":
       return "Trop de tentatives. Réessayez dans quelques minutes.";
