@@ -26,8 +26,8 @@ export default function CoachLayout() {
           headerRightContainerStyle: { paddingRight: 16 },
         }}>
         <Tabs.Screen
-          name="today"
-          options={{ title: "Aujourd'hui", tabBarIcon: () => <Text style={{ fontSize: 20 }}>🎾</Text> }}
+          name="dashboard"
+          options={{ title: "Tableau de bord", tabBarIcon: () => <Text style={{ fontSize: 20 }}>📊</Text> }}
         />
         <Tabs.Screen
           name="calendar"

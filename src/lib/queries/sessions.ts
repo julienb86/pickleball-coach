@@ -131,3 +131,21 @@ export function useSetPresence() {
     onSettled: () => queryClient.invalidateQueries({ queryKey: CALENDAR_KEY }),
   });
 }
+
+export type AssignSession = SlotRef & { coachId: string | null };
+
+/** Admin only: puts a coach on an upcoming session, replaces or removes them (see 016). */
+export function useAssignSession() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ date, slot, coachId }: AssignSession) => {
+      const { error } = await supabase.rpc("admin_assign_session", {
+        p_date: date,
+        p_slot: slot,
+        p_coach_id: coachId,
+      });
+      if (error) throw new Error(error.message);
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: CALENDAR_KEY }),
+  });
+}

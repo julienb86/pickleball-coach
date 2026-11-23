@@ -27,7 +27,7 @@ export default function Index() {
   }
 
   if (profile?.role === "coach") {
-    return <Redirect href="/(coach)/today" />;
+    return <Redirect href="/(coach)/dashboard" />;
   }
 
   if (profile?.role === "player") {

@@ -32,7 +32,7 @@ export default function AccountsScreen() {
 
   // The tab is hidden for everyone else, and the database refuses them anyway.
   if (!isAdmin) {
-    return <Redirect href="/(coach)/today" />;
+    return <Redirect href="/(coach)/dashboard" />;
   }
 
   const all = accounts.data ?? [];

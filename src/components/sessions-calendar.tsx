@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocalSearchParams } from "expo-router";
 import {
   ActivityIndicator,
   Pressable,
@@ -35,6 +36,7 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { SessionProgram } from "@/components/session-program";
 import { Avatar } from "@/components/avatar";
+import { AdminCoachPicker } from "@/components/admin-coach-picker";
 
 const WEEKDAY_HEADERS = ["L", "M", "M", "J", "V", "S", "D"];
 
@@ -48,6 +50,20 @@ export function SessionsCalendar() {
     const d = parseISODate(nextSessionDate(today));
     return { year: d.getFullYear(), month: d.getMonth() };
   });
+
+  // Opened on a given day (e.g. from the dashboard). Applied whenever the
+  // parameter changes, not only as initial state: a tab screen stays mounted
+  // between two visits.
+  const { date: requestedDate } = useLocalSearchParams<{ date?: string }>();
+  const [appliedDate, setAppliedDate] = useState<string | undefined>();
+  if (requestedDate !== appliedDate) {
+    setAppliedDate(requestedDate);
+    if (requestedDate && isSessionDay(requestedDate)) {
+      setSelected(requestedDate);
+      const d = parseISODate(requestedDate);
+      setView({ year: d.getFullYear(), month: d.getMonth() });
+    }
+  }
 
   function changeMonth(delta: number) {
     const d = new Date(view.year, view.month + delta, 1);
@@ -290,6 +306,8 @@ function SlotDetail({
           </Text>
         </Pressable>
       )}
+
+      {isCoach && isUpcoming && <AdminCoachPicker data={data} date={date} slot={slot.key} />}
 
       {mutationError && <Text style={styles.error}>{mutationError.message}</Text>}
 

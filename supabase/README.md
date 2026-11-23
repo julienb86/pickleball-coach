@@ -27,6 +27,7 @@ Dans l'éditeur SQL du projet (SQL Editor), exécuter chaque fichier en entier, 
 12. `012_wednesday_slots.sql` : séances du mercredi en 2 créneaux (18h-20h, 20h-22h) en plus du lundi.
 13. `013_demote_coach.sql` : l’admin peut repasser un coach en joueur.
 14. `014_admin_set_password.sql` : l’admin donne un mot de passe provisoire (mot de passe oublié, sans fournisseur d’email).
+15. `016_admin_assign_session.sql` : l’admin positionne, remplace ou retire le coach d’une séance à venir.
 
 La base de test démarre vide : elle ne contient pas les données de la base principale.
 

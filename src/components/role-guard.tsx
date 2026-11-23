@@ -30,7 +30,7 @@ export function RoleGuard({
   }
 
   if (profile.role !== role) {
-    return <Redirect href={profile.role === "coach" ? "/(coach)/today" : "/(player)/progress"} />;
+    return <Redirect href={profile.role === "coach" ? "/(coach)/dashboard" : "/(player)/progress"} />;
   }
 
   return <>{children}</>;
